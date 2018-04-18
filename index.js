@@ -49,11 +49,7 @@ function Loggy(scriptSource, data) {
         })];
 
     // Log in AWS
-    if( process.env.AWS_ACCESS_KEY_ID &&
-        process.env.AWS_SECRET_ACCESS_KEY &&
-        process.env.AWS_REGION &&
-        process.env.LOGGY_CW_GROUPNAME
-    ) {
+    if(process.env.LOGGY_CW_GROUPNAME) {
         transports.push(new WinstonCloudWatch({
             // logGroupName: `porketta/${process.env.ENV}/mod_proxy/`,
             logGroupName: process.env.LOGGY_CW_GROUPNAME,
@@ -61,7 +57,8 @@ function Loggy(scriptSource, data) {
             awsAccessKeyId: process.env.AWS_ACCESS_KEY_ID,
             awsSecretKey: process.env.AWS_SECRET_ACCESS_KEY,
             awsRegion: process.env.AWS_REGION,
-            jsonMessage: true
+            jsonMessage: true,
+            level: logLevel
         }));
     }
 
@@ -120,5 +117,12 @@ Loggy.prototype.warn = function(){};
 Loggy.prototype.error = function(){};
 Loggy.prototype.fatal = function(){};
 
+if(process.env.AWS_LAMBDA_FUNCTION_NAME){
+    // If running in a lambda just wrap console.lot
+    console.log('DAJEEE');
+    module.exports = require('./Log2');
+}
+else {
+    module.exports = Loggy;
+}
 
-module.exports = Loggy;

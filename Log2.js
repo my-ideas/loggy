@@ -28,7 +28,7 @@ function Loggy(scriptSource, data) {
 
 }
 
-Loggy.prototype.log = function(logEvent, level){
+Loggy.prototype.log = function(logEvent, level, context = undefined){
     if(typeof logEvent !== 'object'){
         logEvent = {message: (logEvent || '')};
     }
@@ -45,23 +45,27 @@ Loggy.prototype.log = function(logEvent, level){
     logEvent.source = this.scriptName;
     logEvent.elyenv = process.env.elyenv;
 
+    if(context){
+        logEvent.meta = context;
+    }
+
     console.log(JSON.stringify(extend(logEvent, this.data)));
 };
 
-Loggy.prototype.debug = function(logEvent){
-    this.log(logEvent, 'debug');
+Loggy.prototype.debug = function(logEvent, context = undefined){
+    this.log(logEvent, 'debug', context);
 };
 
-Loggy.prototype.info = function(logEvent){
-    this.log(logEvent, 'info');
+Loggy.prototype.info = function(logEvent, context = undefined){
+    this.log(logEvent, 'info', context);
 };
 
-Loggy.prototype.warn = function(logEvent){
-    this.log(logEvent, 'warn');
+Loggy.prototype.warn = function(logEvent, context = undefined){
+    this.log(logEvent, 'warn', context);
 };
 
-Loggy.prototype.error = function(logEvent){
-    this.log(logEvent, 'error');
+Loggy.prototype.error = function(logEvent, context = undefined){
+    this.log(logEvent, 'error', context);
 };
 
 
