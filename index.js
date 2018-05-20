@@ -119,7 +119,6 @@ Loggy.prototype.fatal = function(){};
 
 if(process.env.AWS_LAMBDA_FUNCTION_NAME){
     // If running in a lambda just wrap console.lot
-    console.log('DAJEEE');
     module.exports = require('./Log2');
 }
 else {

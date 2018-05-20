@@ -19,7 +19,7 @@
   "dependencies": {
     "app-root-dir": "^1.0.2",
     "dotenv": "^5.0.1",
-    "winston": "^2.4.1",
+    "winston": "^2.4.2",
     "winston-cloudwatch": "^1.13.1"
   }
 }
