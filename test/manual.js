@@ -1,10 +1,10 @@
 require('dotenv').config();
-process.env.AWS_LAMBDA_FUNCTION_NAME = "lalla";
+// process.env.AWS_LAMBDA_FUNCTION_NAME = "lalla";
 const Loggy = require('./../index');
 const log = new Loggy(__filename, {env: 'environment'});
 
-
-log.info("A simple message");
+log.warn("Cosi e' comodo",{uid: 'das auto'});
+log.info("Dajeeeeee");
 log.debug("A simple DEBUG message");
 log.debug("A message", {
     context: "this is a context object",

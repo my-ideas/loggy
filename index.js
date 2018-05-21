@@ -1,13 +1,13 @@
 require('dotenv').config();
 const url = require('url');
 const winston = require('winston');
-const WinstonCloudWatch = require('winston-cloudwatch');
+const WinstonCloudWatch = require('@my-ideas/winston-cloudwatch');
 const os = require('os');
 
 // set default log level.
 const logLevel = 'debug';
 
-/**
+/**npm
  * Wrap console.log with some sugar to AWS CloudWatch Logs
  * @param scriptSource Always pass __filename here
  * @param data Object an object that is always appended to each log statement
@@ -60,6 +60,12 @@ function Loggy(scriptSource, data) {
             jsonMessage: true,
             level: logLevel
         }));
+    }
+    else {
+        console.log("**********************************");
+        console.log("env LOGGY_CW_GROUPNAME not set   *");
+        console.log("Logs won't be sent to CloudWatch *");
+        console.log("**********************************");
     }
 
 
