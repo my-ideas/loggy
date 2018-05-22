@@ -99,7 +99,7 @@ function Loggy(scriptSource, data) {
             // message
             // context
             if(arguments.length === 3) {
-                origLog.apply(logger, [arguments[0], arguments[1], Object.assign(me.data, arguments[2])]);
+                origLog.apply(logger, [arguments[0], arguments[1], Object.assign({}, me.data, arguments[2])]);
             }
 
             else {
