@@ -23,7 +23,7 @@ function Loggy(scriptSource, data) {
         source = source.replace('.','');
     }
 
-    this.scriptName = source;
+    this.scriptName = '';
     this.data = data || {};
 
 }
@@ -43,7 +43,7 @@ Loggy.prototype.log = function(logEvent, level, context = undefined){
 
     logEvent.level = level;
     logEvent.source = this.scriptName;
-    logEvent.elyenv = process.env.elyenv;
+    logEvent.stage = process.env.stage;
 
     if(context){
         logEvent.meta = context;
