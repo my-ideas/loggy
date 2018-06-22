@@ -50,9 +50,10 @@ function Loggy(scriptSource, data) {
 
     // Log in AWS
     if(process.env.LOGGY_CW_GROUPNAME) {
+        const logGroup = eval('`'+process.env.LOGGY_CW_GROUPNAME+'`');
+        console.log(`Logging to ${logGroup}`);
         transports.push(new WinstonCloudWatch({
-            // logGroupName: `porketta/${process.env.ENV}/mod_proxy/`,
-            logGroupName: process.env.LOGGY_CW_GROUPNAME,
+            logGroupName: logGroup,
             logStreamName: os.hostname(),
             awsAccessKeyId: process.env.AWS_ACCESS_KEY_ID,
             awsSecretKey: process.env.AWS_SECRET_ACCESS_KEY,
