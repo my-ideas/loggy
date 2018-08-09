@@ -3,7 +3,6 @@
  */
 const extend = require('util')._extend;
 
-
 /**
  * Wrap console.log with some sugar to AWS CloudWatch Logs
  * @param scriptSource Always pass __filename here

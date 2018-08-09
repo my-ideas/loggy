@@ -7,6 +7,35 @@ const os = require('os');
 // set default log level.
 const logLevel = 'debug';
 
+const Transport = require('winston').Transport;
+ 
+class SimpleConsole extends Transport {
+    constructor(opts) {
+        super(opts);
+    }
+
+    log(level, message, meta, callback) {
+
+        if (meta instanceof Error) {
+            console.log(meta);
+            
+            if(!message || message.length == 0) {
+                message = meta.message;                
+            }
+
+            // Error can't be serialized by JSON.stringify 
+            // because it's proeprty are not enumerable
+            // o, resta di stucco - e' un barbatrucco
+            meta.error = JSON.parse(JSON.stringify(meta, Object.getOwnPropertyNames(meta)));
+        }
+        
+
+        console.log(`[${new Date().toISOString()}] [${level}] - ${JSON.stringify({ message, meta })}`);
+        if (callback && typeof callback === 'function')
+            callback(null, true);
+    }
+}
+
 /**npm
  * Wrap console.log with some sugar to AWS CloudWatch Logs
  * @param scriptSource Always pass __filename here
@@ -41,12 +70,8 @@ function Loggy(scriptSource, data) {
     this.data = data || {};
 
     const transports = [
-        new (winston.transports.Console)({
-            colorize: true,
-            timestamp: true,
-            prettyPrint: JSON.stringify,
-            stderrLevels: []
-        })];
+        new SimpleConsole()
+    ];
 
     // Log in AWS
     if(process.env.LOGGY_CW_GROUPNAME) {
@@ -87,29 +112,30 @@ function Loggy(scriptSource, data) {
     winston.addColors(customColors);
 
     // Extend logger object to properly log 'Error' types
-    const origLog = logger.log;
-    const me = this;
-    logger.log = function (level, msg) {
-        if (msg instanceof Error) {
-            const args = Array.prototype.slice.call(arguments);
-            args[1] = msg.stack;
-            origLog.apply(logger, args)
-        } else {
+    // const origLog = logger.log;
+    // const me = this;
+    // logger.log = function (level, msg) {
+    //     if (msg instanceof Error) {
+    //         const args = Array.prototype.slice.call(arguments);
+    //         args[1] = msg.stack;
+    //         origLog.apply(logger, args)
+    //     } else {
 
-            // level
-            // message
-            // context
-            if(arguments.length === 3) {
-                origLog.apply(logger, [arguments[0], arguments[1], Object.assign({}, me.data, arguments[2])]);
-            }
+    //         // level
+    //         // message
+    //         // context
+    //         console.log(`=== ${typeof arguments[1]} ===`);
+    //         if(arguments.length === 3) {
+    //             origLog.apply(logger, [arguments[0], arguments[1], Object.assign({}, me.data, arguments[2])]);
+    //         }
 
-            else {
-                origLog.apply(logger, [arguments[0], arguments[1], me.data]);
-            }
+    //         else {
+    //             origLog.apply(logger, [arguments[0], arguments[1], me.data]);
+    //         }
 
 
-        }
-    };
+    //     }
+    // };
 
 
 
@@ -131,4 +157,3 @@ if(process.env.AWS_LAMBDA_FUNCTION_NAME){
 else {
     module.exports = Loggy;
 }
-
