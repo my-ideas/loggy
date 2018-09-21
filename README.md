@@ -1,10 +1,35 @@
 # loggy
 
-A logging module that wrpas winston/console.log
+Not even a module.
 
-When running in a standalone node application, if the env variable `LOGGY_CW_GROUPNAME` is set, send logs to CloudWatch Logs 
+Loggy expose methods to log statement. A log event can by 
 
-If the code is running in an AWS Lambda function, logs are sent to CloudWatch using the standard console.log (thus saving an API call for each log statement)
+* `log.info(message: string)`
+* `log.info(object: object)`
+* `log.info(message: string, object: object)`
+* `log.info(error: Error)`
+* `log.info(error: Error), object: object)`
+
+Any possible input is always "logged" as a JSON object
+```
+{
+  level: "<log level>",
+  time: "${new Date()}",
+  message: "<message|error.message>",
+  stage: process.env.STAGE,
+  meta: {
+    // anything defined in the object passed to the log
+    // error.stacktrace if defined
+  }
+}
+
+```
+
+If `process.env.LOGGY_CW_GROUPNAME` is defined, logs are sent to Cloudwatch. 
+If `process.env.AWS_LAMBDA_FUNCTION_NAME` is set, then logs are sent only to the console. AWS Lambda automajically send them to CloudWatch 
+
+
+AWS credentials are taken from env or from EC2 role. AWS_REGION should always be set as an ENV (aws sdk limitation) 
 
 ## How to use
 Install the module `npm install --save @my-ideas/loggy` and then use it in your code
@@ -12,8 +37,7 @@ Install the module `npm install --save @my-ideas/loggy` and then use it in your 
 
 const Loggy = require('./index');
 
-// __filename is mandatory, the latter object is optional and always added to each log statement 
-const log = new Loggy(__filename, {env: 'environment'});
+const log = new Loggy({env: 'environment'});
 
 exports.handler = async (event) => {
 

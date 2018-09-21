@@ -1,159 +1,155 @@
-require('dotenv').config();
-const url = require('url');
-const winston = require('winston');
-const WinstonCloudWatch = require('@my-ideas/winston-cloudwatch');
-const os = require('os');
+const AWS = require("aws-sdk");
 
-// set default log level.
-const logLevel = 'debug';
+function Loggy(fileName, context, out = console.log) {
 
-const Transport = require('winston').Transport;
- 
-class SimpleConsole extends Transport {
-    constructor(opts) {
-        super(opts);
+    if(!fileName){
+        throw new Error("First argument __filename is mandatory");
     }
 
-    log(level, message, meta, callback) {
+    this.fileName = require('path').basename(fileName);
+    this.ctx = context;
 
-        if (meta instanceof Error) {
-            console.log(meta);
-            
-            if(!message || message.length == 0) {
-                message = meta.message;                
-            }
-
-            // Error can't be serialized by JSON.stringify 
-            // because it's proeprty are not enumerable
-            // o, resta di stucco - e' un barbatrucco
-            meta.error = JSON.parse(JSON.stringify(meta, Object.getOwnPropertyNames(meta)));
-        }
-        
-
-        console.log(`[${new Date().toISOString()}] [${level}] - ${JSON.stringify({ message, meta })}`);
-        if (callback && typeof callback === 'function')
-            callback(null, true);
-    }
-}
-
-/**npm
- * Wrap console.log with some sugar to AWS CloudWatch Logs
- * @param scriptSource Always pass __filename here
- * @param data Object an object that is always appended to each log statement
- * @constructor
- */
-function Loggy(scriptSource, data) {
-
-
-    // Set up logger
-    const customColors = {
-        trace: 'white',
-        debug: 'green',
-        info: 'blue',
-        warn: 'yellow',
-        error: 'red',
-        fatal: 'red'
-    };
-
-    // sriptsource is __filename.
-    // Remove from the path everything that is up to the module folder, and assume that the module name match the module folder
-    let appRootDir = require('app-root-dir').get().split('/');
-    appRootDir.pop();
-    appRootDir = appRootDir.join('/');
-
-    let source = scriptSource.replace(appRootDir, '').replace(/\//g, '.');
-    if(source.startsWith('.')){
-        source = source.replace('.','');
-    }
-
-    this.scriptName = source;
-    this.data = data || {};
-
-    const transports = [
-        new SimpleConsole()
-    ];
-
-    // Log in AWS
     if(process.env.LOGGY_CW_GROUPNAME) {
-        const logGroup = eval('`'+process.env.LOGGY_CW_GROUPNAME+'`');
-        console.log(`Logging to ${logGroup}`);
-        transports.push(new WinstonCloudWatch({
-            logGroupName: logGroup,
-            logStreamName: os.hostname(),
-            awsAccessKeyId: process.env.AWS_ACCESS_KEY_ID,
-            awsSecretKey: process.env.AWS_SECRET_ACCESS_KEY,
-            awsRegion: process.env.AWS_REGION,
-            jsonMessage: true,
-            level: logLevel
-        }));
+        this.buffer = [];
+        this.out = (message) => {
+            console.log(message);
+            this.buffer.push({message, timestamp: new Date().getTime()});
+        }
     }
     else {
-        console.log("**********************************");
-        console.log("env LOGGY_CW_GROUPNAME not set   *");
-        console.log("Logs won't be sent to CloudWatch *");
-        console.log("**********************************");
+        this.out = out;
+    }
+
+    const debugLog = (mess) => {
+        // do nothing
+    };
+
+
+    if(process.env.LOGGY_CW_GROUPNAME) {
+        // Setup the CloudWatch poller
+        const logGroupName = process.env.LOGGY_CW_GROUPNAME;
+        const logStreamName = require('os').hostname();
+        const cwPublishInterval = -1;
+        const cw = new AWS.CloudWatchLogs();
+
+        this.sequenceToken = "";
+
+        cw.createLogGroup({ logGroupName }).promise()
+            .catch(err => {
+                if(err.code === "ResourceAlreadyExistsException") {
+                    return {};
+                }
+                throw err;
+            })
+            .then(res => {
+                debugLog(res);
+                return cw.createLogStream({ logGroupName, logStreamName }).promise();
+            })
+            .catch(err => {
+                if(err.code === "ResourceAlreadyExistsException") {
+                    return {};
+                }
+                throw err;
+            })
+            .then(() => {
+                // Get the sequence token
+                return cw.describeLogStreams({
+                    logGroupName,
+                    logStreamNamePrefix: logStreamName
+                }).promise();
+            })
+            .then(streams => {
+                debugLog(streams);
+                return streams.logStreams.filter(s => s.logStreamName === logStreamName)[0]
+            })
+            .then(logStream => {
+                debugLog(logStream);
+                this.sequenceToken = logStream.uploadSequenceToken;
+                return logStream.uploadSequenceToken;
+            })
+            .then(token => {
+
+                this.cwPublishInterval = setInterval(() => {
+                    debugLog(`      --> Sending to CW - [${this.buffer.length}] [${this.sequenceToken}]`);
+                    const bufferCopy = this.buffer.slice(0);
+
+                    if(bufferCopy.length === 0) {
+                        debugLog(`      --> NOTHING to sentd - [${this.buffer.length}] [${this.sequenceToken}]`);
+                        return;
+                    }
+
+                    cw.putLogEvents({
+                        logEvents: bufferCopy,
+                        logGroupName,
+                        logStreamName,
+                        sequenceToken: this.sequenceToken
+                    }).promise()
+                    .then(res => {
+                        this.sequenceToken = res.nextSequenceToken;
+                        this.buffer = this.buffer.slice(bufferCopy.length);
+                        debugLog(`      --> SENT - [${this.buffer.length}] [${this.sequenceToken}]`);
+                    })
+                }, 500)
+            })
+
     }
 
 
-    const logger = new (winston.Logger)({
-        colors: customColors,
-        level: logLevel,
-        levels: {
-            fatal: 0,
-            error: 1,
-            warn: 2,
-            info: 3,
-            debug: 4,
-            trace: 5
-        },
-        transports
-    });
-
-    winston.addColors(customColors);
-
-    // Extend logger object to properly log 'Error' types
-    // const origLog = logger.log;
-    // const me = this;
-    // logger.log = function (level, msg) {
-    //     if (msg instanceof Error) {
-    //         const args = Array.prototype.slice.call(arguments);
-    //         args[1] = msg.stack;
-    //         origLog.apply(logger, args)
-    //     } else {
-
-    //         // level
-    //         // message
-    //         // context
-    //         console.log(`=== ${typeof arguments[1]} ===`);
-    //         if(arguments.length === 3) {
-    //             origLog.apply(logger, [arguments[0], arguments[1], Object.assign({}, me.data, arguments[2])]);
-    //         }
-
-    //         else {
-    //             origLog.apply(logger, [arguments[0], arguments[1], me.data]);
-    //         }
-
-
-    //     }
-    // };
-
-
-
-    return logger;
 }
+//
+Loggy.prototype.log = function(logEvent, level, context = undefined){
 
-/* Methods are generated by winston. I like my IDE to know what I am typing... */
-Loggy.prototype.trace = function(){};
-Loggy.prototype.debug = function(){};
-Loggy.prototype.info = function(){};
-Loggy.prototype.warn = function(){};
-Loggy.prototype.error = function(){};
-Loggy.prototype.fatal = function(){};
+    const logMessage = {};
+    logMessage.message = '';
+    logMessage.level = level;
+    logMessage.time = `${new Date()}`;
+    logMessage.stage = process.env.STAGE || process.env.stage;
+    logMessage.meta = { __script: this.fileName };
 
-if(process.env.AWS_LAMBDA_FUNCTION_NAME){
-    // If running in a lambda just wrap console.lot
-    module.exports = require('./Log2');
-}
-else {
-    module.exports = Loggy;
-}
+
+    // Map an Error
+    mapError = (err) => JSON.parse(JSON.stringify(err, Object.getOwnPropertyNames(err)));
+
+    if(typeof logEvent === 'string'){
+        logMessage.message = logEvent;
+    }
+    else if(logEvent instanceof Error ){
+        logMessage.message = logEvent.message;
+        logMessage.meta.error = mapError(logEvent);
+    }
+
+    if (context && context instanceof Error) {
+        logMessage.meta.error = mapError(context);
+    }
+    else if(context) {
+        logMessage.meta = Object.assign(logMessage.meta , context, this.ctx);
+    }
+
+
+    if(logMessage.message === '') {
+        delete logMessage.message;
+    }
+
+    // Handy for console and debug. Not for journalctl
+    this.out(JSON.stringify(Object.assign(logMessage, this.data), null, 4) + "\n");
+};
+
+
+Loggy.prototype.debug = function(logEvent, context = undefined){
+    this.log(logEvent, 'debug', context);
+};
+
+Loggy.prototype.info = function(logEvent, context = undefined){
+    this.log(logEvent, 'info', context);
+};
+
+Loggy.prototype.warn = function(logEvent, context = undefined){
+    this.log(logEvent, 'warn', context);
+};
+
+Loggy.prototype.error = function(logEvent, context = undefined){
+    this.log(logEvent, 'error', context);
+};
+
+
+module.exports = Loggy;

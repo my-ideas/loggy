@@ -1,7 +1,7 @@
 {
   "name": "@my-ideas/loggy",
   "version": "1.0.9",
-  "description": "A simple, AWS LAmbda-ready nodejs logging module",
+  "description": "Not even a module, just a usefull preset for logs that send to AWS Cloudwatch. Ready to be used in EC2, AWS LAmbda or on premise",
   "main": "index.js",
   "scripts": {
     "test": "mocha test"
@@ -16,14 +16,15 @@
     "url": "https://github.com/my-ideas/loggy/issues"
   },
   "homepage": "https://github.com/my-ideas/loggy#readme",
-  "dependencies": {
-    "@my-ideas/winston-cloudwatch": "^1.13.1",
-    "app-root-dir": "^1.0.2",
-    "dotenv": "^5.0.1",
-    "winston": "^2.4.2"
+  "dependencies": {},
+  "peerDependencies": {
+    "aws-sdk": "^2.319.0"
   },
   "devDependencies": {
+    "aws-sdk": "^2.319.0",
+    "boom": "^7.2.0",
     "chai": "^4.1.2",
+    "dotenv": "^6.0.0",
     "mocha": "^5.2.0"
   }
 }
