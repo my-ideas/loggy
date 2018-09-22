@@ -1,5 +1,9 @@
 const AWS = require("aws-sdk");
 
+function metaParse(str) {
+    return eval('`'+str+'`');
+}
+
 function Loggy(fileName, context, out = console.log) {
 
     if(!fileName){
@@ -27,7 +31,8 @@ function Loggy(fileName, context, out = console.log) {
 
     if(process.env.LOGGY_CW_GROUPNAME) {
         // Setup the CloudWatch poller
-        const logGroupName = process.env.LOGGY_CW_GROUPNAME;
+        const logGroupName = metaParse(process.env.LOGGY_CW_GROUPNAME);
+        console.log(`logGroupName: ${logGroupName}`);
         const logStreamName = require('os').hostname();
         const cwPublishInterval = -1;
         const cw = new AWS.CloudWatchLogs();
