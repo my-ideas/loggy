@@ -1,6 +1,6 @@
 {
   "name": "@my-ideas/loggy",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Not even a module, just a usefull preset for logs that send to AWS Cloudwatch. Ready to be used in EC2, AWS LAmbda or on premise",
   "main": "index.js",
   "scripts": {
