@@ -123,9 +123,13 @@ describe("Loggy behaviour", function () {
     });
 
 
-    // TODO with data override
-
-    it("bum", function () {
-        new Loggy().info("cao");
-    })
+    // it("Multiple instances share the same CloudWatch API", function () {
+    //     process.env.LOGGY_CW_GROUPNAME = "/test/zzz";
+    //     const a = new Loggy("aaa");
+    //     const b = new Loggy("bbb");
+    //     const c = new Loggy("ccc");
+    //
+    //     console.log()
+    //
+    // })
 });
