@@ -5,7 +5,9 @@ function metaParse(str) {
 }
 
 const debugLog = (mess) => {
-    console.log(mess);
+    if(process.env.LOGGY_DEBUG && process.env.LOGGY_DEBUG === 'console') {
+        console.log(mess);
+    }
 };
 
 function Loggy(fileName, context, out = console.log) {
